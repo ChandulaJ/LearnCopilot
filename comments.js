@@ -1,34 +1,47 @@
 //create web server
-const express = require('express');
-const app = express();
-const port = 3000;
+var express = require('express');
+var app = express();
+var bodyParser = require('body-parser');
+var mongoose = require('mongoose');
+var Comment = require('./models/comment');
+var Post = require('./models/post');
+var User = require('./models/user');
+var jwt = require('jsonwebtoken');
+var config = require('./config');
+var router = express.Router();
+var port = process.env.PORT || 8080;
+var morgan = require('morgan');
+var path = require('path');
+var cors = require('cors');
+var http = require('http');
+var server = http.createServer(app);
+var io = require('socket.io').listen(server);
 
-//create a route
-app.get('/', (req, res) => {
-    res.send('Hello World!')
-})
+//connect to DB
+mongoose.connect(config.database);
 
-//create a route
-app.get('/comments', (req, res) => {
-    res.send('This is a comment')
-})
+//use body parser
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
 
-//create a route
-app.get('/comments/:id', (req, res) => {
-    res.send('This is a comment with id ' + req.params.id)
-})
+app.use(cors());
 
-//create a route
-app.get('/comments/:id/:title', (req, res) => {
-    res.send('This is a comment with id ' + req.params.id + ' and title ' + req.params.title)
-})
+//use morgan to log requests to console
+app.use(morgan('dev'));
 
-//create a route
-app.get('/comments/:id/:title/:name', (req, res) => {
-    res.send('This is a comment with id ' + req.params.id + ', title ' + req.params.title + ' and name ' + req.params.name)
-})
+//set static files location
+//used for requests that our frontend will make
+app.use(express.static(__dirname + '/public'));
 
-//start the server
-app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`)
-})
+//api routes
+var apiRoutes = require('./app/routes/api')(router, io);
+app.use('/api', apiRoutes);
+
+//home route
+app.get('*', function(req, res){
+  res.sendFile(path.join(__dirname + '/public/app/views/index.html'));
+});
+
+//start server
+server.listen(port);
+console.log('Server running on port ' + port);
